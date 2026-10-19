@@ -406,7 +406,7 @@
       );
       const total = cart.reduce((sum, item) => sum + item.option.price * item.quantity, 0);
       const message = `Hola Parfum Club! Quiero realizar el siguiente pedido: ${lines.join(", ")}. Total: ${formatPrice(total)}. Muchas gracias.`;
-      window.location.href = `https://wa.me/9542234984494?text=${encodeURIComponent(message)}`;
+      window.location.href = `https://wa.me/+5492234984494?text=${encodeURIComponent(message)}`;
     }
 
     productGrid.addEventListener("click", (event) => {
