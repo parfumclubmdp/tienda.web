@@ -106,7 +106,15 @@
       background: var(--surface); border: 1px solid var(--line); box-shadow: 0 25px 90px #0009;
     }
     .product-dialog { display: grid; grid-template-columns: 1fr 1fr; }
-    .dialog-image { min-height: 470px; width: 100%; height: 100%; object-fit: cover; background: #28251e; }
+    .dialog-gallery { display: flex; min-width: 0; flex-direction: column; }
+    .dialog-image { display: block; width: 100%; height: 440px; object-fit: cover; background: #28251e; }
+    .image-thumbnails { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 10px; }
+    .image-thumbnail {
+      overflow: hidden; padding: 0; aspect-ratio: 1.35; border: 1px solid var(--line);
+      background: #28251e; cursor: pointer; opacity: .7;
+    }
+    .image-thumbnail[aria-pressed="true"] { border-color: var(--gold); opacity: 1; }
+    .image-thumbnail img { display: block; width: 100%; height: 100%; object-fit: cover; }
     .dialog-content { padding: clamp(26px, 5vw, 48px); }
     .dialog h2 { margin: 11px 0 13px; font: 500 34px/1.15 var(--serif); }
     .dialog-description { color: var(--muted); font-size: 14px; line-height: 1.8; }
@@ -178,7 +186,7 @@
       .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
       .product-card-name { padding: 13px 12px 15px; font-size: 17px; }
       .product-dialog { display: block; }
-      .dialog-image { display: block; height: 270px; min-height: 0; }
+      .dialog-image { height: 270px; }
       .dialog-content { padding: 25px 23px 28px; }
       .dialog h2 { font-size: 29px; }
     }
@@ -236,7 +244,10 @@
       <button class="close-button" type="button" data-close aria-label="Cerrar detalle">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m6 6 12 12M18 6 6 18"/></svg>
       </button>
-      <img class="dialog-image" id="detail-image" src="" alt="">
+      <div class="dialog-gallery">
+        <img class="dialog-image" id="detail-image" src="" alt="">
+        <div class="image-thumbnails" id="image-thumbnails" aria-label="Imágenes del perfume"></div>
+      </div>
       <div class="dialog-content">
         <span class="eyebrow">Perfumería árabe</span>
         <h2 id="product-title"></h2>
@@ -274,25 +285,70 @@
   <script>
     const products = [
       {
-        id: "oud-mood",
-        name: "Oud Mood",
-        image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=1000&q=85",
-        description: "Una composición envolvente de oud, rosa y ámbar. Su corazón especiado se funde con maderas cálidas y un fondo dulce de vainilla. El formato de 5ml llega en atomizador portátil recargable, ideal para llevar tu aroma contigo.",
-        options: [{ label: "5ml", price: 9500 }, { label: "10ml", price: 16500 }, { label: "Perfume Completo", price: 58900 }]
+        id: "armaf-odyssey-mandarin-sky",
+        name: "Armaf Odyssey Mandarin Sky",
+        images: [
+          { src: "imagenes/mandarin sky.webp", alt: "Armaf Odyssey Mandarin Sky" },
+          { src: "imagenes/mandarin.webp", alt: "Otra vista de Armaf Odyssey Mandarin Sky" },
+          { src: "imagenes/mandarin notas.jpg", alt: "Notas de Armaf Odyssey Mandarin Sky" }
+        ],
+        description: "Una fragancia moderna, dulce y adictiva que combina cítricos, caramelo y notas cálidas. Su salida presenta mandarina, naranja, lavanda y especias, mientras que su corazón acaramelado aporta una dulzura intensa y envolvente. En el fondo aparecen haba tonka, vainilla, pachulí, vetiver y notas amaderadas que le dan profundidad y elegancia. Su aroma recuerda a una mandarina jugosa mezclada con caramelo dulce y un fondo cálido y masculino. Tiene una duración estimada de 7 a 10 horas y una proyección moderada a fuerte. Es ideal para citas, fiestas, salidas nocturnas y ocasiones especiales, especialmente en otoño e invierno. Se suele comparar con Scandal EDP de Jean Paul Gaultier por su perfil dulce y acaramelado, aunque no son idénticos.",
+        options: [{ label: "5ml", price: 8000 }, { label: "10ml", price: 14250 }, { label: "Perfume entero", price: 104000 }]
       },
       {
-        id: "khamrah",
-        name: "Khamrah",
-        image: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
-        description: "Una fragancia gourmand, cálida y adictiva. La canela y la nuez moscada abren paso a dátiles dulces y praliné, sobre una base cremosa de vainilla, mirra y maderas. Disponible también en atomizador portátil recargable de 5ml.",
-        options: [{ label: "5ml", price: 10500 }, { label: "10ml", price: 18500 }, { label: "Perfume Completo", price: 64900 }]
+        id: "afnan-9pm-night-out",
+        name: "Afnan 9PM Night Out",
+        images: [
+          { src: "imagenes/9pmno.jpg", alt: "Afnan 9PM Night Out" },
+          { src: "imagenes/9pm.no.webp", alt: "Otra vista de Afnan 9PM Night Out" },
+          { src: "imagenes/9pmno notas.jpg", alt: "Notas de Afnan 9PM Night Out" }
+        ],
+        description: "Una fragancia intensa, moderna y sofisticada, ideal para quienes buscan destacar en sus salidas nocturnas. Combina notas de pitahaya, bergamota, coñac, lavanda y manzana en su salida, seguidas de cardamomo, gamuza, toffee y cedro. Su fondo de haba tonka, maderas ambaradas y pachulí aporta calidez, profundidad y un toque dulce. Tiene un aroma frutal, especiado, ligeramente licoroso y amaderado, con una duración estimada de 7 a 10 horas y una proyección fuerte durante las primeras horas. Es ideal para fiestas, citas y eventos nocturnos, especialmente en otoño e invierno. Su estilo combina frescura, dulzura y sensualidad, perfecto para quienes quieren dejar una buena impresión.",
+        options: [{ label: "5ml", price: 11000 }, { label: "10ml", price: 19500 }, { label: "Perfume entero", price: 153000 }]
       },
       {
-        id: "yara",
-        name: "Yara",
-        image: "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=1000&q=85",
-        description: "Delicada y luminosa, combina frutas tropicales y flores suaves con un acorde de vainilla y almizcle. Un aroma dulce, elegante y fácil de llevar. Prueba la versión de 5ml en su atomizador portátil recargable.",
-        options: [{ label: "5ml", price: 8900 }, { label: "10ml", price: 15500 }, { label: "Perfume Completo", price: 52900 }]
+        id: "rasasi-hawas-ice",
+        name: "Rasasi Hawas Ice",
+        images: [
+          { src: "imagenes/hawas-ice.webp", alt: "Rasasi Hawas Ice" },
+          { src: "imagenes/hawas ice.webp", alt: "Otra vista de Rasasi Hawas Ice" },
+          { src: "imagenes/hawas ice notas.jpg", alt: "Notas de Rasasi Hawas Ice" }
+        ],
+        description: "Una fragancia fresca, frutal y moderna que transmite energía y limpieza desde el primer momento. Su salida combina manzana, limón italiano, bergamota siciliana y anís estrellado. En el corazón aparecen ciruela, flor de azahar y cardamomo, mientras que su fondo de almizcle, ámbar, madera de deriva y musgo aporta profundidad y un acabado masculino. Su aroma mezcla cítricos refrescantes con frutas dulces y un fondo ligeramente amaderado, creando un equilibrio entre frescura y sensualidad. Tiene una duración estimada de 7 a 10 horas y una proyección moderada a fuerte, especialmente al principio. Es ideal para primavera y verano, vacaciones, salidas y uso diario. Se suele comparar con el estilo de Invictus de Paco Rabanne por su perfil fresco, frutal y dulce, aunque no es una réplica exacta.",
+        options: [{ label: "5ml", price: 8000 }, { label: "10ml", price: 14250 }, { label: "Perfume entero", price: 112000 }]
+      },
+      {
+        id: "bharara-king",
+        name: "Bharara King",
+        images: [
+          { src: "imagenes/bharara.webp", alt: "Bharara King" },
+          { src: "imagenes/bharara king.webp", alt: "Otra vista de Bharara King" },
+          { src: "imagenes/bharara notas.jpg", alt: "Notas de Bharara King" }
+        ],
+        description: "Un perfume llamativo, fresco y frutal, ideal para quienes buscan una fragancia con presencia y personalidad. Combina notas cítricas de naranja y otras frutas con un corazón frutal dulce y un fondo de almizcle, ámbar y notas amaderadas. Su aroma es vibrante y jugoso al principio, con una mezcla de cítricos y frutas dulces que evoluciona hacia un acabado cálido, almizclado y envolvente. Su duración estimada es de 8 a 12 horas, con una proyección fuerte, especialmente durante las primeras horas. Es una excelente opción para usar durante el día, en primavera y verano, aunque también funciona para salidas y eventos durante todo el año. Ideal para quienes buscan un perfume fresco, dulce y con una estela que se haga notar. Esta fragancia busca inspirarse en Erba Pura de Xerjoff.",
+        options: [{ label: "5ml", price: 11000 }, { label: "10ml", price: 19500 }, { label: "Perfume entero", price: 154000 }]
+      },
+      {
+        id: "lattafa-fakhar-black",
+        name: "Lattafa Fakhar Negro",
+        images: [
+          { src: "imagenes/fakharn box.jpg", alt: "Caja de Lattafa Fakhar Negro" },
+          { src: "imagenes/fakharn.webp", alt: "Lattafa Fakhar Negro" },
+          { src: "imagenes/fakharn notas.jpg", alt: "Notas de Lattafa Fakhar Negro" }
+        ],
+        description: "Una fragancia masculina, elegante y versátil, perfecta para acompañarte en cualquier ocasión. Su salida combina manzana, bergamota y jengibre, seguida de un corazón aromático de lavanda, salvia, bayas de enebro y geranio. En el fondo aparecen haba tonka, cedro, vetiver y maderas ambaradas, que aportan profundidad y un toque cálido. Su aroma es fresco, ligeramente frutal, limpio y amaderado, con una dulzura equilibrada que lo hace muy fácil de usar. Tiene una duración estimada de 6 a 9 horas y una proyección moderada a fuerte al comienzo. Es ideal para el colegio, el trabajo, reuniones, salidas y uso diario durante todo el año. Se suele comparar con Yves Saint Laurent Eau de Parfum por su perfil fresco, aromático y moderno, aunque presenta diferencias en su composición.",
+        options: [{ label: "5ml", price: 6000 }, { label: "10ml", price: 11000 }, { label: "Perfume entero", price: 83500 }]
+      },
+      {
+        id: "lattafa-badee-al-oud-honor-glory",
+        name: "Lattafa Badee Al Oud Honor & Glory",
+        images: [
+          { src: "imagenes/h&g.jpg", alt: "Lattafa Badee Al Oud Honor & Glory" },
+          { src: "imagenes/h&g..webp", alt: "Otra vista de Lattafa Badee Al Oud Honor & Glory" },
+          { src: "imagenes/honor&glory.jpg", alt: "Notas de Lattafa Badee Al Oud Honor & Glory" }
+        ],
+        description: "Una fragancia dulce, cremosa y original, perfecta para quienes disfrutan de los aromas gourmand. Su salida combina piña y crème brûlée, creando una sensación frutal y acaramelada. En el corazón aparecen canela, cúrcuma, pimienta negra y benjuí, mientras que su fondo de vainilla, sándalo y notas amaderadas aporta calidez y suavidad. Huele a piña dulce mezclada con crema caramelizada, especias y vainilla, logrando un aroma envolvente y diferente. Su duración estimada es de 7 a 10 horas, con una proyección moderada a fuerte. Es ideal para citas, cenas, salidas y ocasiones especiales, especialmente en otoño e invierno. Una excelente opción para quienes buscan un perfume dulce, llamativo y con mucha personalidad.",
+        options: [{ label: "5ml", price: 6000 }, { label: "10ml", price: 11000 }, { label: "Perfume entero", price: 86000 }]
       }
     ];
 
@@ -311,7 +367,7 @@
     function renderProducts() {
       productGrid.innerHTML = products.map((product) => `
         <button class="product-card" type="button" data-product-id="${product.id}" aria-label="Ver ${product.name}">
-          <img src="${product.image}" alt="${product.name}" loading="lazy">
+          <img src="${product.images[0].src}" alt="${product.images[0].alt}" loading="lazy">
           <span class="product-card-name">${product.name}</span>
         </button>
       `).join("");
@@ -331,8 +387,12 @@
 
     function showProduct(product) {
       selectedProduct = product;
-      document.getElementById("detail-image").src = product.image;
-      document.getElementById("detail-image").alt = product.name;
+      showProductImage(product, 0);
+      document.getElementById("image-thumbnails").innerHTML = product.images.map((image, index) => `
+        <button class="image-thumbnail" type="button" data-image-index="${index}" aria-label="Ver ${image.alt}" aria-pressed="${index === 0}">
+          <img src="${image.src}" alt="">
+        </button>
+      `).join("");
       document.getElementById("product-title").textContent = product.name;
       document.getElementById("product-description").textContent = product.description;
       sizeSelect.innerHTML = product.options.map((option, index) =>
@@ -341,6 +401,15 @@
       updateDetailPrice();
       openOverlay(productOverlay);
       document.getElementById("add-to-cart").focus();
+    }
+
+    function showProductImage(product, index) {
+      const image = product.images[index];
+      document.getElementById("detail-image").src = image.src;
+      document.getElementById("detail-image").alt = image.alt;
+      document.querySelectorAll(".image-thumbnail").forEach((thumbnail, thumbnailIndex) => {
+        thumbnail.setAttribute("aria-pressed", String(thumbnailIndex === index));
+      });
     }
 
     function updateDetailPrice() {
@@ -465,6 +534,12 @@
       if (!card) return;
       const product = products.find((item) => item.id === card.dataset.productId);
       if (product) showProduct(product);
+    });
+
+    document.getElementById("image-thumbnails").addEventListener("click", (event) => {
+      const thumbnail = event.target.closest("[data-image-index]");
+      if (!selectedProduct || !thumbnail) return;
+      showProductImage(selectedProduct, Number(thumbnail.dataset.imageIndex));
     });
 
     sizeSelect.addEventListener("change", updateDetailPrice);
