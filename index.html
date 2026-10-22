@@ -28,9 +28,9 @@
     html { scroll-behavior: smooth; }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); }
     body.locked { overflow: hidden; }
-    button, select { font: inherit; }
+    button, input, select { font: inherit; }
     button { color: inherit; }
-    button:focus-visible, a:focus-visible, select:focus-visible {
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
       outline: 2px solid var(--gold-light);
       outline-offset: 4px;
     }
@@ -129,6 +129,12 @@
       width: 100%; height: 48px; padding: 0 13px; background: #12120f;
       border: 1px solid var(--line); border-radius: 0; color: var(--text);
     }
+    .customer-name-label { display: block; margin: 0 0 9px; font-size: 12px; font-weight: 700; letter-spacing: .06em; }
+    .customer-name-input {
+      width: 100%; height: 46px; margin-bottom: 19px; padding: 0 13px; background: #12120f;
+      border: 1px solid var(--line); border-radius: 0; color: var(--text);
+    }
+    .customer-name-input::placeholder { color: var(--muted); }
     .price-row { display: flex; align-items: center; justify-content: space-between; margin: 22px 0; }
     .price-row span { color: var(--muted); font-size: 13px; }
     .price-row strong { color: var(--gold-light); font: 600 25px var(--serif); }
@@ -270,6 +276,8 @@
       </div>
       <div class="cart-items" id="cart-items"></div>
       <div class="cart-summary">
+        <label class="customer-name-label" for="customer-name">Nombre y apellido <span aria-hidden="true">*</span></label>
+        <input class="customer-name-input" id="customer-name" type="text" autocomplete="name" maxlength="100" placeholder="Tu nombre y apellido" required>
         <div class="total-line"><span>Total</span><strong id="cart-total">$0</strong></div>
         <button class="primary-button" id="checkout-button" type="button">
           <svg class="whatsapp-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -468,7 +476,7 @@
       toastTimeout = setTimeout(() => toast.classList.remove("visible"), 2200);
     }
 
-    function getNextWhatsAppDestination() {
+    function getNextWhatsAppOrder() {
       return new Promise((resolve, reject) => {
         if (!whatsappRotationEndpoint) {
           reject(new Error("La rotación de WhatsApp aún no está configurada."));
@@ -488,12 +496,13 @@
           clearTimeout(timeout);
           delete window.parfumClubCallbacks[callbackName];
           script.remove();
-          const destination = whatsappDestinations[response?.destination];
-          if (!destination) {
-            reject(new Error("La hoja no devolvió un destino de WhatsApp válido."));
+          const destination = whatsappDestinations[response && response.destination];
+          const orderNumber = response && response.orderNumber;
+          if (!destination || !Number.isSafeInteger(orderNumber) || orderNumber < 1) {
+            reject(new Error("La hoja no devolvió un destinatario y número de pedido válidos."));
             return;
           }
-          resolve(destination);
+          resolve({ destination, orderNumber });
         };
         script.onerror = () => {
           clearTimeout(timeout);
@@ -511,15 +520,25 @@
         showToast("Agrega una fragancia antes de realizar tu pedido");
         return;
       }
+      const customerNameInput = document.getElementById("customer-name");
+      const customerName = customerNameInput.value.trim().replace(/\s+/g, " ");
+      if (customerName.split(" ").filter(Boolean).length < 2) {
+        customerNameInput.setCustomValidity("Ingresa tu nombre y apellido.");
+        customerNameInput.reportValidity();
+        customerNameInput.focus();
+        return;
+      }
+      customerNameInput.setCustomValidity("");
+
       const checkoutButton = document.getElementById("checkout-button");
       checkoutButton.disabled = true;
       const lines = cart.map((item) =>
         `${item.quantity}x ${item.product.name} (${item.option.label}) - ${formatPrice(item.option.price * item.quantity)}`
       );
       const total = cart.reduce((sum, item) => sum + item.option.price * item.quantity, 0);
-      const message = `Hola Parfum Club! Quiero realizar el siguiente pedido: ${lines.join(", ")}. Total: ${formatPrice(total)}. Muchas gracias.`;
       try {
-        const destination = await getNextWhatsAppDestination();
+        const { destination, orderNumber } = await getNextWhatsAppOrder();
+        const message = `Hola Parfum Club! Quiero realizar el pedido #${orderNumber}.\nNombre y apellido: ${customerName}.\n\n${lines.join("\n")}\nTotal: ${formatPrice(total)}.\nMuchas gracias.`;
         window.location.href = `https://wa.me/${destination}?text=${encodeURIComponent(message)}`;
       } catch (error) {
         console.error("No se pudo asignar el destino del pedido:", error);
@@ -528,6 +547,10 @@
         checkoutButton.disabled = false;
       }
     }
+
+    document.getElementById("customer-name").addEventListener("input", (event) => {
+      event.currentTarget.setCustomValidity("");
+    });
 
     productGrid.addEventListener("click", (event) => {
       const card = event.target.closest("[data-product-id]");
