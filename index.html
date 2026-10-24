@@ -97,6 +97,8 @@
     }
     .product-card:hover { transform: translateY(-5px); border-color: var(--line); }
     .product-card img { display: block; width: 100%; aspect-ratio: 4 / 4.25; object-fit: cover; background: #28251e; }
+    .bundle-preview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); aspect-ratio: 4 / 4.25; overflow: hidden; background: #28251e; }
+    .product-card .bundle-preview img { width: 100%; height: 100%; min-width: 0; aspect-ratio: auto; object-fit: cover; }
     .product-card-name { display: block; padding: 18px 18px 5px; font: 500 20px var(--serif); }
     .product-card-price { display: block; padding: 0 18px 18px; color: var(--logo-blue); font-size: 13px; font-weight: 600; }
     .site-footer { padding: 27px 6vw; border-top: 1px solid var(--line); color: var(--muted); text-align: center; font-size: 12px; }
@@ -135,6 +137,7 @@
       width: 100%; height: 48px; padding: 0 13px; background: #12120f;
       border: 1px solid var(--line); border-radius: 0; color: var(--text);
     }
+    .size-label[hidden], .size-select[hidden], #bundle-options[hidden] { display: none; }
     .customer-name-label { display: block; margin: 0 0 9px; font-size: 12px; font-weight: 700; letter-spacing: .06em; }
     .customer-name-input {
       width: 100%; height: 46px; margin-bottom: 19px; padding: 0 13px; background: #12120f;
@@ -257,8 +260,9 @@
         <span class="eyebrow">Perfumería árabe</span>
         <h2 id="product-title"></h2>
         <p class="dialog-description" id="product-description"></p>
-        <label class="size-label" for="size-select">Elige tu presentación</label>
+        <label class="size-label" id="size-label" for="size-select">Elige tu presentación</label>
         <select class="size-select" id="size-select"></select>
+        <div id="bundle-options" hidden></div>
         <div class="price-row"><span>Precio</span><strong id="detail-price"></strong></div>
         <button class="primary-button" id="add-to-cart" type="button">Agregar al carrito</button>
       </div>
@@ -359,11 +363,32 @@
       }
     ];
 
+    const perfumeProducts = products.slice();
+    products.push(
+      {
+        id: "combo-3-decants-5ml",
+        name: "Combo especial · 3 decants de 5ml a elección",
+        images: perfumeProducts.map((product) => product.images[0]),
+        description: "Elige tres perfumes distintos entre los seis disponibles. Precio especial fijo por los tres decants.",
+        options: [{ label: "3 decants de 5ml", price: 27000 }],
+        bundle: { volume: "5ml", count: 3 }
+      },
+      {
+        id: "combo-3-decants-10ml",
+        name: "Combo especial · 3 decants de 10ml a elección",
+        images: perfumeProducts.map((product) => product.images[0]),
+        description: "Elige tres perfumes distintos entre los seis disponibles. Precio especial fijo por los tres decants.",
+        options: [{ label: "3 decants de 10ml", price: 49000 }],
+        bundle: { volume: "10ml", count: 3 }
+      }
+    );
+
     const cart = [];
     const productGrid = document.getElementById("product-grid");
     const productOverlay = document.getElementById("product-overlay");
     const cartOverlay = document.getElementById("cart-overlay");
     const sizeSelect = document.getElementById("size-select");
+    const bundleOptions = document.getElementById("bundle-options");
     const whatsappRotationEndpoint = "https://script.google.com/macros/s/AKfycbwGFn5Ob2d4JSmkBWzjRcq9I9TOm-3hRFLq2TVPQijDtB73llW3uBUPq94rJiK68Mhx/exec";
     const whatsappDestinations = { 1: "5492234984494", 2: "5492234486526" };
     let selectedProduct = null;
@@ -373,12 +398,18 @@
 
     function renderProducts() {
       productGrid.innerHTML = products.map((product) => {
-        const fiveMlOption = product.options.find((option) => option.label === "5ml");
+        const price = product.bundle
+          ? product.options[0].price
+          : product.options.find((option) => option.label === "5ml").price;
+        const preview = product.bundle
+          ? `<div class="bundle-preview" aria-hidden="true">${product.images.map((image) => `<img src="${image.src}" alt="" loading="lazy">`).join("")}</div>`
+          : `<img src="${product.images[0].src}" alt="${product.images[0].alt}" loading="lazy">`;
+        const priceLabel = product.bundle ? "precio fijo" : "desde";
         return `
-          <button class="product-card" type="button" data-product-id="${product.id}" aria-label="Ver ${product.name}, desde ${formatPrice(fiveMlOption.price)} por 5 ml">
-            <img src="${product.images[0].src}" alt="${product.images[0].alt}" loading="lazy">
+          <button class="product-card" type="button" data-product-id="${product.id}" aria-label="Ver ${product.name}, ${priceLabel} ${formatPrice(price)}">
+            ${preview}
             <span class="product-card-name">${product.name}</span>
-            <span class="product-card-price">Desde ${formatPrice(fiveMlOption.price)} · 5 ml</span>
+            <span class="product-card-price">${product.bundle ? "3 decants" : "Desde"} ${formatPrice(price)}${product.bundle ? " · precio fijo" : " · 5 ml"}</span>
           </button>
         `;
       }).join("");
@@ -409,6 +440,18 @@
       sizeSelect.innerHTML = product.options.map((option, index) =>
         `<option value="${index}">${option.label} — ${formatPrice(option.price)}</option>`
       ).join("");
+      document.getElementById("size-label").hidden = Boolean(product.bundle);
+      sizeSelect.hidden = Boolean(product.bundle);
+      bundleOptions.hidden = !product.bundle;
+      if (product.bundle) {
+        bundleOptions.innerHTML = Array.from({ length: product.bundle.count }, (_, index) => `
+          <label class="size-label" for="bundle-choice-${index}">Perfume ${index + 1}</label>
+          <select class="size-select bundle-choice" id="bundle-choice-${index}" aria-label="Elegir perfume ${index + 1}"></select>
+        `).join("");
+        updateBundleChoices();
+      } else {
+        bundleOptions.innerHTML = "";
+      }
       updateDetailPrice();
       openOverlay(productOverlay);
       document.getElementById("add-to-cart").focus();
@@ -429,12 +472,33 @@
       document.getElementById("detail-price").textContent = formatPrice(option.price);
     }
 
+    function updateBundleChoices() {
+      const selectors = [...bundleOptions.querySelectorAll(".bundle-choice")];
+      const selectedIds = selectors.map((selector) => selector.value);
+      selectors.forEach((selector, index) => {
+        const selectedElsewhere = new Set(selectedIds.filter((id, otherIndex) => id && otherIndex !== index));
+        selector.innerHTML = `<option value="">Elige un perfume</option>${perfumeProducts
+          .filter((product) => !selectedElsewhere.has(product.id) || product.id === selectedIds[index])
+          .map((product) => `<option value="${product.id}">${product.name}</option>`).join("")}`;
+        selector.value = selectedIds[index];
+      });
+    }
+
     function addSelectedToCart() {
       if (!selectedProduct) return;
       const option = selectedProduct.options[Number(sizeSelect.value)];
-      const existing = cart.find((item) => item.product.id === selectedProduct.id && item.option.label === option.label);
+      const bundleSelections = selectedProduct.bundle
+        ? [...bundleOptions.querySelectorAll(".bundle-choice")].map((selector) => selector.value)
+        : [];
+      if (selectedProduct.bundle && (bundleSelections.some((id) => !id) || new Set(bundleSelections).size !== selectedProduct.bundle.count)) {
+        showToast("Elige tres perfumes distintos para el combo");
+        return;
+      }
+      const existing = cart.find((item) => item.product.id === selectedProduct.id
+        && item.option.label === option.label
+        && JSON.stringify(item.bundleSelections || []) === JSON.stringify(bundleSelections));
       if (existing) existing.quantity += 1;
-      else cart.push({ product: selectedProduct, option, quantity: 1 });
+      else cart.push({ product: selectedProduct, option, quantity: 1, bundleSelections });
       renderCart();
       closeOverlay(productOverlay);
       document.getElementById("open-cart").setAttribute("aria-label", `Abrir carrito, ${cart.reduce((sum, item) => sum + item.quantity, 0)} productos`);
@@ -456,7 +520,9 @@
         <article class="cart-item">
           <div>
             <h3 class="cart-item-name">${item.product.name}</h3>
-            <p class="cart-item-option">${item.option.label} · ${formatPrice(item.option.price)} c/u</p>
+            <p class="cart-item-option">${item.option.label}${item.bundleSelections.length
+              ? ` · ${item.bundleSelections.map((id) => perfumeProducts.find((product) => product.id === id).name).join(", ")}`
+              : ` · ${formatPrice(item.option.price)} c/u`}</p>
             <span class="cart-item-price">${formatPrice(item.option.price * item.quantity)}</span>
           </div>
           <div class="cart-item-actions" aria-label="Cantidad de ${item.product.name}">
@@ -536,7 +602,9 @@
       const checkoutButton = document.getElementById("checkout-button");
       checkoutButton.disabled = true;
       const lines = cart.map((item) =>
-        `${item.quantity}x ${item.product.name} (${item.option.label}) - ${formatPrice(item.option.price * item.quantity)}`
+        `${item.quantity}x ${item.product.name} (${item.option.label}${item.bundleSelections.length
+          ? `: ${item.bundleSelections.map((id) => perfumeProducts.find((product) => product.id === id).name).join(", ")}`
+          : ""}) - ${formatPrice(item.option.price * item.quantity)}`
       );
       const total = cart.reduce((sum, item) => sum + item.option.price * item.quantity, 0);
       try {
@@ -569,6 +637,7 @@
     });
 
     sizeSelect.addEventListener("change", updateDetailPrice);
+    bundleOptions.addEventListener("change", updateBundleChoices);
     document.getElementById("add-to-cart").addEventListener("click", addSelectedToCart);
     document.getElementById("open-cart").addEventListener("click", () => openOverlay(cartOverlay));
     document.getElementById("checkout-button").addEventListener("click", checkout);
